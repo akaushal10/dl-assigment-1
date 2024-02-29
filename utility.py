@@ -33,7 +33,7 @@ def sigmoid(n):
 
 #Softmax Output Fn()
 def softmax(X):
-    return np.exp(X) / np.sum(np.exp(X))
+    return np.exp(X) / np.sum(np.exp(X),axis=1, keepdims=True)
 
 # Log Loss or binary Cross Entropy
 def crossEntropy(Y):
