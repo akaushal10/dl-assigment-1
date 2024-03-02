@@ -5,8 +5,11 @@ SIGMOID = "sigmoid"
 MEAN_SQUARE_ERROR = "mse"
 SOFT_MAX = "softmax"
 RE_LU = "relu"
+DEL_SIGMOID = "del_sigmoid"
+DEL_TAN_H = "del_tanh"
 CROSS_ENTROPY = "cross_entropy"
 TAN_H = "tanh"
+DEL_RE_LU = "del_relu"
 
 # Mean Square Error
 def mse(y_true,y_pred):
@@ -31,6 +34,10 @@ def sigmoid(n):
     """
     return 1.0 / (1 + np.exp(-n))
 
+# Derivative of Sigmoid Fu()
+def del_sigmoid(n):
+    return (1.0 / (1 + np.exp(-(n))))*(1 -  1.0 / (1 + np.exp(-(n))))
+
 #Softmax Output Fn()
 def softmax(X):
     return np.exp(X) / np.sum(np.exp(X),axis=1, keepdims=True)
@@ -48,9 +55,17 @@ def tanh(z):
     # return np.tanh(z)
     return (np.exp(z)-np.exp(-z))/(np.exp(z)+np.exp(-z))
 
+# Derivative of tanh
+def del_tanh(z):
+    return 1-np.tanh(z)**2
+
 #Relu
 def reLu(z):
     return np.maximum(z,0.0)
+
+# Derivative of Relu
+def del_reLu(z):
+    return (z>0)*np.ones(z.shape) + (z<0)*(0.01*np.ones(z.shape) )
 
 activation = {
     SIGMOID :sigmoid,
@@ -59,4 +74,9 @@ activation = {
     CROSS_ENTROPY :crossEntropy,
     TAN_H :tanh,
 }
-# MEAN_SQUARE_ERROR :mse,
+
+del_activation = {
+    DEL_SIGMOID : del_sigmoid,
+    DEL_TAN_H : del_tanh,
+    DEL_RE_LU : del_reLu,
+}
