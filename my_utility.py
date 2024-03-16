@@ -1,63 +1,5 @@
 import numpy as np
 
-# Constants
-SIGMOID_KEY = "sigmoid"
-TANH_KEY = "tanh"
-RELU_KEY = "ReLU"
-XAVIER_KEY = "Xavier"
-RANDOM_KEY = "random"
-HE_KEY = "HE"
-SGD_KEY="sgd"
-MGD_KEY="momentum"
-NAG_KEY="nag"
-RMSPROP_KEY="rmsprop"
-ADAM_KEY="adam"
-NADAM_KEY="nadam"
-
-CROSS_ENTROPY_KEY = 'cross_entropy'
-MEAN_SQUARE_KEY = 'mean_squared_error'
-
-FASHION_MNIST_DATASET_KEY = 'fashion_mnist'
-MNIST_DATASET_KEY = 'mnist'
-
-def sigmoid(z):
-    # z = np.clip(z,500,-500)
-    return 1.0 / (1 + np.exp(-(z)))
-
-
-def tanh(z):
-    return np.tanh(z)
-
-
-def sin(z):
-    return np.sin(z)
-
-
-def reLu(z):
-    return (z>0)*(z) + ((z<0)*(z)*0.01)
-    #return np.maximum(z,0)
-    #return np.where(z<0, 0.01*z, z)
-
-def softmax(Z):
-    # Z = np.clip(Z,500,-500)
-    Z -= np.max(Z)
-    # Compute softmax
-    exp_Z = np.exp(Z)
-    softmax_output = exp_Z / np.sum(exp_Z)
-    return softmax_output
-
-
-def del_sigmoid(z):
-    # z = np.clip(z,500,-500)
-    return  (1.0 / (1 + np.exp(-(z))))*(1 -  1.0 / (1 + np.exp(-(z))))
-
-def del_tanh(z):
-    return 1 - np.tanh(z) ** 2
-
-
-def del_reLu(z):
-    return (z>0)*np.ones(z.shape) + (z<0)*(0.01*np.ones(z.shape) )
-
 def Xavier_initializer(dim):
     '''
     Xavier weight initialization for neural networks.
@@ -121,15 +63,12 @@ def crossEntropyLoss( Y_true, Y_pred):
     Returns:
     - float: Cross-Entropy loss.
     '''
-    # CE = [-Y_true[i] * np.log(Y_pred[i]) for i in range(len(Y_pred))]
-    # crossEntropy = np.mean(CE)
-    # return crossEntropy
     eps = 1e-15
     Y_pred = np.clip(Y_pred,eps,1.0-eps)
     loss = -np.sum(Y_true*np.log(Y_pred),axis=1)
     loss = np.mean(loss)
     return loss
-# helper functions
+
 def oneHotEncode(num_classes, Y_train_raw):
     '''
     Performs one-hot encoding on the provided labels.
@@ -181,3 +120,40 @@ def accuracy(Y_true, Y_pred, data_size):
     return acc, Y_true_vals, Y_pred_vals
 
 
+def sigmoid(z):
+    # z = np.clip(z,500,-500)
+    return 1.0 / (1 + np.exp(-(z)))
+
+
+def tanh(z):
+    return np.tanh(z)
+
+
+def sin(z):
+    return np.sin(z)
+
+
+def reLu(z):
+    return (z>0)*(z) + ((z<0)*(z)*0.01)
+    #return np.maximum(z,0)
+    #return np.where(z<0, 0.01*z, z)
+
+def softmax(Z):
+    # Z = np.clip(Z,500,-500)
+    Z -= np.max(Z)
+    # Compute softmax
+    exp_Z = np.exp(Z)
+    softmax_output = exp_Z / np.sum(exp_Z)
+    return softmax_output
+
+
+def del_sigmoid(z):
+    # z = np.clip(z,500,-500)
+    return  (1.0 / (1 + np.exp(-(z))))*(1 -  1.0 / (1 + np.exp(-(z))))
+
+def del_tanh(z):
+    return 1 - np.tanh(z) ** 2
+
+
+def del_reLu(z):
+    return (z>0)*np.ones(z.shape) + (z<0)*(0.01*np.ones(z.shape) )

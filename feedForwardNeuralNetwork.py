@@ -1,20 +1,15 @@
 import time
 import numpy as np
-from matplotlib import pyplot as plt
 from my_utility import accuracy,oneHotEncode,random_initializer
 from my_utility import sigmoid,tanh,reLu,del_sigmoid,del_reLu,del_tanh,softmax
 from my_utility import Xavier_initializer,random_initializer,He_initializer
 from my_utility import oneHotEncode,accuracy,printAccuracy
 from my_utility import crossEntropyLoss,meanSquaredErrorLoss
-from my_utility import SIGMOID_KEY,TANH_KEY,RELU_KEY
-from my_utility import XAVIER_KEY,RANDOM_KEY,HE_KEY
-from my_utility import SGD_KEY,MGD_KEY,NAG_KEY,RMSPROP_KEY,ADAM_KEY,NADAM_KEY
-from my_utility import CROSS_ENTROPY_KEY,MEAN_SQUARE_KEY
-
-GRAD_A = "del_a"
-GRAD_W = "del_w"
-GRAD_H = "del_h"
-GRAD_B = "del_b"
+from constant import SIGMOID_KEY,TANH_KEY,RELU_KEY
+from constant import XAVIER_KEY,RANDOM_KEY,HE_KEY
+from constant import SGD_KEY,MGD_KEY,NAG_KEY,RMSPROP_KEY,ADAM_KEY,NADAM_KEY
+from constant import CROSS_ENTROPY_KEY,MEAN_SQUARE_KEY
+from constant import GRAD_A,GRAD_W,GRAD_H,GRAD_B
 
 class FeedForwardNeuralNetwork:
     '''
@@ -133,6 +128,14 @@ class FeedForwardNeuralNetwork:
             TANH_KEY: del_tanh,
             RELU_KEY: del_reLu,
         }
+        self.Optimizer_dict = {
+            SGD_KEY: self.sgdOptimizer,
+            MGD_KEY: self.mgdOptimizer,
+            NAG_KEY: self.nagOptimizer,
+            RMSPROP_KEY: self.rmsOptimizer,
+            ADAM_KEY: self.adamOptimizer,
+            NADAM_KEY: self.nadamOptimizer,
+        }
 
         self.Initializer_dict = {
             XAVIER_KEY: Xavier_initializer,
@@ -140,14 +143,6 @@ class FeedForwardNeuralNetwork:
             HE_KEY: He_initializer
         }
 
-        self.Optimizer_dict = {
-            SGD_KEY: self.sgdMiniBatch,
-            MGD_KEY: self.mgd,
-            NAG_KEY: self.nag,
-            RMSPROP_KEY: self.rmsProp,
-            ADAM_KEY: self.adam,
-            NADAM_KEY: self.nadam,
-        }
 
         self.activation = self.Activations_dict[activation]
         self.der_activation = self.DerActivation_dict[activation]
@@ -223,6 +218,12 @@ class FeedForwardNeuralNetwork:
             l+=1
         return weights, biases
 
+    def initWeight(self):
+        return [np.zeros((self.network[l+1], self.network[l])) for l in range(0,len(self.network)-1)]
+
+    def initBias(self):
+        return [np.zeros((self.network[l+1], 1)) for l in range(0, len(self.network)-1)]
+
 
     def forwardPropagate(self, X_train_batch, weights, biases):
         '''
@@ -293,42 +294,42 @@ class FeedForwardNeuralNetwork:
 
         # Gradient with respect to the output layer is absolutely fine.
         if self.loss_function == CROSS_ENTROPY_KEY:
-            globals()["grad_a" + str(num_layers - 1)] = -(Y_train_batch - Y)
+            globals()[GRAD_A + str(num_layers - 1)] = -(Y_train_batch - Y)
         elif self.loss_function == MEAN_SQUARE_KEY:
-            globals()["grad_a" + str(num_layers - 1)] = np.multiply(
+            globals()[GRAD_A + str(num_layers - 1)] = np.multiply(
                 2 * (Y - Y_train_batch), np.multiply(Y, (1 - Y))
             )
 
         for l in range(num_layers - 2, -1, -1):
 
             if ALPHA != 0:
-                globals()["grad_W" + str(l + 1)] = (
-                    np.outer(globals()["grad_a" + str(l + 1)], H[str(l)])
+                globals()[GRAD_H + str(l + 1)] = (
+                    np.outer(globals()[GRAD_A + str(l + 1)], H[str(l)])
                     + ALPHA * self.weights[str(l + 1)]
                 )
             elif ALPHA == 0:
-                globals()["grad_W" + str(l + 1)] = np.outer(
-                    globals()["grad_a" + str(l + 1)], H[str(l)]
+                globals()[GRAD_H + str(l + 1)] = np.outer(
+                    globals()[GRAD_A + str(l + 1)], H[str(l)]
                 )
-            globals()["grad_b" + str(l + 1)] = globals()["grad_a" + str(l + 1)]
-            gradients_weights.append(globals()["grad_W" + str(l + 1)])
-            gradients_biases.append(globals()["grad_b" + str(l + 1)])
+            globals()[GRAD_B + str(l + 1)] = globals()[GRAD_A + str(l + 1)]
+            gradients_weights.append(globals()[GRAD_H + str(l + 1)])
+            gradients_biases.append(globals()[GRAD_B + str(l + 1)])
             if l != 0:
-                globals()["grad_h" + str(l)] = np.matmul(
+                globals()[GRAD_H + str(l)] = np.matmul(
                     self.weights[str(l + 1)].transpose(),
-                    globals()["grad_a" + str(l + 1)],
+                    globals()[GRAD_A + str(l + 1)],
                 )
-                globals()["grad_a" + str(l)] = np.multiply(
-                    globals()["grad_h" + str(l)], self.der_activation(A[str(l)])
+                globals()[GRAD_A + str(l)] = np.multiply(
+                    globals()[GRAD_H + str(l)], self.der_activation(A[str(l)])
                 )
             elif l == 0:
 
-                globals()["grad_h" + str(l)] = np.matmul(
+                globals()[GRAD_H + str(l)] = np.matmul(
                     self.weights[str(l + 1)].transpose(),
-                    globals()["grad_a" + str(l + 1)],
+                    globals()[GRAD_A + str(l + 1)],
                 )
-                globals()["grad_a" + str(l)] = np.multiply(
-                    globals()["grad_h" + str(l)], (A[str(l)])
+                globals()[GRAD_A + str(l)] = np.multiply(
+                    globals()[GRAD_H + str(l)], (A[str(l)])
                 )
         return gradients_weights, gradients_biases
 
@@ -344,14 +345,14 @@ class FeedForwardNeuralNetwork:
         - weight_decay: Regularization parameter to control overfitting (default is 0).
 
         Returns:
-        - trainingloss: List of training losses per epoch.
-        - trainingaccuracy: List of training accuracies per epoch.
-        - validationaccuracy: List of validation accuracies per epoch.
+        - train_loss: List of training losses per epoch.
+        - train_acc: List of training accuracies per epoch.
+        - val_accu: List of validation accuracies per epoch.
         - Y_pred: Predicted outputs after training.
         '''
-        trainingloss = []
-        trainingaccuracy = []
-        validationaccuracy = []
+        train_loss = []
+        train_accu = []
+        val_accu = []
         network_size = len(self.network)
 
         # Extract a subset of the training dataset
@@ -368,9 +369,7 @@ class FeedForwardNeuralNetwork:
             ), Y_train.reshape(self.num_classes, length_dataset)
 
             LOSS = []
-            del_w = [np.zeros((self.network[l + 1], self.network[l])) for l in range(0, len(self.network) - 1)]
-            del_b = [np.zeros((self.network[l + 1], 1)) for l in range(0, len(self.network) - 1)]
-
+            del_w, del_b = self.initWeight(),self.initBias()
             i = 0
 
             # Iterate through the dataset
@@ -404,10 +403,10 @@ class FeedForwardNeuralNetwork:
 
             # Compute training and validation accuracies, and append to lists
             Y_pred = self.predict(self.X_train, self.N_train)
-            trainingloss.append(np.mean(LOSS))
-            trainingaccuracy.append(accuracy(Y_train, Y_pred, length_dataset)[0])
+            train_loss.append(np.mean(LOSS))
+            train_accu.append(accuracy(Y_train, Y_pred, length_dataset)[0])
             Y_val_pred = self.predict(self.X_val, self.N_val)
-            validationaccuracy.append(accuracy(self.Y_val, Y_val_pred, self.N_val)[0])
+            val_accu.append(accuracy(self.Y_val, Y_val_pred, self.N_val)[0])
             l2RegulerizedValue = self.L2RegularisationLoss(weight_decay)
             val_loss = 0
             if self.loss_function == MEAN_SQUARE_KEY:
@@ -416,15 +415,15 @@ class FeedForwardNeuralNetwork:
             else:
               temp = crossEntropyLoss(self.Y_val.T, Y_val_pred.T)+ l2RegulerizedValue
               val_loss = np.mean(temp)
-            printAccuracy(epoch,trainingloss[epoch],trainingaccuracy[epoch],validationaccuracy[epoch],elapsed,self.alpha)
+            printAccuracy(epoch,train_loss[epoch],train_accu[epoch],val_accu[epoch],elapsed,self.alpha)
             epoch += 1
 
-        return trainingloss, trainingaccuracy, validationaccuracy, Y_pred
+        return train_loss, train_accu, val_accu, Y_pred
 
 
 
 
-    def sgdMiniBatch(self, epochs,length_dataset, batch_size, learning_rate, weight_decay = 0):
+    def sgdOptimizer(self, epochs,length_dataset, batch_size, learning_rate, weight_decay = 0):
         '''
         Train the neural network using Stochastic Gradient Descent (SGD) with Mini-Batch updates.
 
@@ -436,17 +435,17 @@ class FeedForwardNeuralNetwork:
         - weight_decay (float, optional): L2 regularization term to control overfitting (default is 0).
 
         Returns:
-        - trainingloss (list): List of training losses for each epoch.
-        - trainingaccuracy (list): List of training accuracies for each epoch.
-        - validationaccuracy (list): List of validation accuracies for each epoch.
+        - train_loss (list): List of training losses for each epoch.
+        - train_acc (list): List of training accuracies for each epoch.
+        - val_accu (list): List of validation accuracies for each epoch.
         - Y_pred (numpy array): Predicted labels for the validation set after training.
 
         '''
         X_train = self.X_train[:, :length_dataset]
         Y_train = self.Y_train[:, :length_dataset]
 
-        trainingloss = []
-        trainingaccuracy, validationaccuracy = [], []
+        train_loss = []
+        train_acc, val_accu = [], []
 
         num_points_seen = 0
 
@@ -454,18 +453,13 @@ class FeedForwardNeuralNetwork:
         epoch = 0
         while epoch < epochs:
             start_time = time.time()
-            idx = np.random.shuffle(np.arange(length_dataset))
-            X_train = X_train[:, idx].reshape(self.img_flattened_size, length_dataset)
-            Y_train = Y_train[:, idx].reshape(self.num_classes, length_dataset)
+            offset = np.random.shuffle(np.arange(length_dataset))
+            X_train = X_train[:, offset].reshape(self.img_flattened_size, length_dataset)
+            Y_train = Y_train[:, offset].reshape(self.num_classes, length_dataset)
 
             LOSS = []
             #Y_pred = []
-            deltaw,deltab = [],[]
-            for l in range(0, len(self.network)-1):
-                deltaw.append(np.zeros((self.network[l+1], self.network[l])))
-            for l in range(0, len(self.network)-1):
-                deltab.append(np.zeros((self.network[l+1], 1)))
-
+            deltaw,deltab = self.initWeight(),self.initBias()
             i = 0
             while i < length_dataset:
                 Y,H,A = self.forwardPropagate(X_train[:,i].reshape(self.img_flattened_size,1), self.weights, self.biases)
@@ -501,20 +495,15 @@ class FeedForwardNeuralNetwork:
                     self.biases = {str(i+1):(self.biases[str(i+1)] - learning_rate*deltab[i]) for i in range(len(self.biases))}
 
                     #resetting gradient updates
-                    deltaw = []
-                    for l in range(0, len(self.network)-1):
-                        deltaw.append(np.zeros((self.network[l+1], self.network[l])))
-                    deltab = []
-                    for l in range(0, len(self.network)-1):
-                        deltab.append(np.zeros((self.network[l+1], 1)))
+                    deltaw,deltab = self.initWeight(),self.initBias()
                 i+=1
             elapsed = time.time() - start_time
 
             Y_pred = self.predict(self.X_train, self.N_train)
-            trainingloss.append(np.mean(LOSS))
-            trainingaccuracy.append(accuracy(Y_train, Y_pred, length_dataset)[0])
+            train_loss.append(np.mean(LOSS))
+            train_acc.append(accuracy(Y_train, Y_pred, length_dataset)[0])
             Y_val_pred = self.predict(self.X_val, self.N_val)
-            validationaccuracy.append(accuracy(self.Y_val, Y_val_pred, self.N_val)[0])
+            val_accu.append(accuracy(self.Y_val, Y_val_pred, self.N_val)[0])
             l2RegulerizedValue = self.L2RegularisationLoss(weight_decay)
             val_loss = 0
             if self.loss_function == MEAN_SQUARE_KEY:
@@ -523,13 +512,13 @@ class FeedForwardNeuralNetwork:
             else:
               temp = crossEntropyLoss(self.Y_val.T, Y_val_pred.T)+ l2RegulerizedValue
               val_loss = np.mean(temp)
-            printAccuracy(epoch,trainingloss[epoch],trainingaccuracy[epoch],validationaccuracy[epoch],elapsed,self.alpha)
+            printAccuracy(epoch,train_loss[epoch],train_acc[epoch],val_accu[epoch],elapsed,self.alpha)
             epoch+=1
 
 
-        return trainingloss, trainingaccuracy, validationaccuracy, Y_pred
+        return train_loss, train_acc, val_accu, Y_pred
 
-    def mgd(self, epochs,length_dataset, batch_size, learning_rate, weight_decay = 0):
+    def mgdOptimizer(self, epochs,length_dataset, batch_size, learning_rate, weight_decay = 0):
         '''
         Train the neural network using the Mini-Batch Gradient Descent (MGD) optimization algorithm with momentum.
 
@@ -541,9 +530,9 @@ class FeedForwardNeuralNetwork:
         - weight_decay (float, optional): L2 regularization term to control overfitting (default is 0).
 
         Returns:
-        - trainingloss (list): List of training losses for each epoch.
-        - trainingaccuracy (list): List of training accuracies for each epoch.
-        - validationaccuracy (list): List of validation accuracies for each epoch.
+        - train_loss (list): List of training losses for each epoch.
+        - train_acc (list): List of training accuracies for each epoch.
+        - val_accu (list): List of validation accuracies for each epoch.
         - Y_pred (numpy array): Predicted labels for the validation set after training.
 
         '''
@@ -554,34 +543,24 @@ class FeedForwardNeuralNetwork:
         Y_train = self.Y_train[:, :length_dataset]
 
 
-        trainingloss = []
-        trainingaccuracy, validationaccuracy = [], []
+        train_loss = []
+        train_acc, val_accu = [], []
 
         num_layers = len(self.network)
 
-        prev_v_w,prev_v_b = [],[]
-        for l in range(0, len(self.network)-1):
-            prev_v_w.append(np.zeros((self.network[l+1], self.network[l])))
-        for l in range(0, len(self.network)-1):
-            prev_v_b.append(np.zeros((self.network[l+1], 1)))
+        prev_v_w,prev_v_b = self.initWeight(),self.initBias()
 
         num_points_seen = 0
         epoch = 0
         while epoch < epochs:
             start_time = time.time()
-            idx = np.random.shuffle(np.arange(length_dataset))
-            X_train = X_train[:, idx].reshape(self.img_flattened_size, length_dataset)
-            Y_train = Y_train[:, idx].reshape(self.num_classes, length_dataset)
+            offset = np.random.shuffle(np.arange(length_dataset))
+            X_train = X_train[:, offset].reshape(self.img_flattened_size, length_dataset)
+            Y_train = Y_train[:, offset].reshape(self.num_classes, length_dataset)
 
             LOSS = []
 
-            deltaw = []
-            for l in range(0, len(self.network)-1):
-                deltaw.append(np.zeros((self.network[l+1], self.network[l])))
-
-            deltab = []
-            for l in range(0, len(self.network)-1):
-                deltab.append(np.zeros((self.network[l+1], 1)))
+            deltaw, deltab = self.initWeight(),self.initBias()
 
             for i in range(length_dataset):
                 Y,H,A = self.forwardPropagate(self.X_train[:,i].reshape(self.img_flattened_size,1), self.weights, self.biases)
@@ -627,21 +606,15 @@ class FeedForwardNeuralNetwork:
 
                     prev_v_w = v_w
                     prev_v_b = v_b
-
-                    deltaw = []
-                    for l in range(0, len(self.network)-1):
-                        deltaw.append(np.zeros((self.network[l+1], self.network[l])))
-                    deltab = []
-                    for l in range(0, len(self.network)-1):
-                        deltab.append(np.zeros((self.network[l+1], 1)))
+                    deltaw, deltab = self.initWeight(),self.initBias()
 
             elapsed = time.time() - start_time
             #Y_pred = np.array(Y_pred).transpose()
             Y_pred = self.predict(self.X_train, self.N_train)
-            trainingloss.append(np.mean(LOSS))
-            trainingaccuracy.append(accuracy(Y_train, Y_pred, length_dataset)[0])
+            train_loss.append(np.mean(LOSS))
+            train_acc.append(accuracy(Y_train, Y_pred, length_dataset)[0])
             Y_val_pred = self.predict(self.X_val, self.N_val)
-            validationaccuracy.append(accuracy(self.Y_val, Y_val_pred, self.N_val)[0])
+            val_accu.append(accuracy(self.Y_val, Y_val_pred, self.N_val)[0])
             l2RegulerizedValue = self.L2RegularisationLoss(weight_decay)
             val_loss = 0
             if self.loss_function == MEAN_SQUARE_KEY:
@@ -650,14 +623,14 @@ class FeedForwardNeuralNetwork:
             else:
               temp = crossEntropyLoss(self.Y_val.T, Y_val_pred.T)+ l2RegulerizedValue
               val_loss = np.mean(temp)
-            printAccuracy(epoch,trainingloss[epoch],trainingaccuracy[epoch],validationaccuracy[epoch],elapsed,self.alpha)
+            printAccuracy(epoch,train_loss[epoch],train_acc[epoch],val_accu[epoch],elapsed,self.alpha)
             epoch+=1
 
-        return trainingloss, trainingaccuracy, validationaccuracy, Y_pred
+        return train_loss, train_acc, val_accu, Y_pred
 
 
 
-    def nag(self,epochs,length_dataset, batch_size,learning_rate, weight_decay = 0):
+    def nagOptimizer(self,epochs,length_dataset, batch_size,learning_rate, weight_decay = 0):
         '''
         Train the neural network using the Nesterov Accelerated Gradient (NAG) optimization algorithm.
 
@@ -669,9 +642,9 @@ class FeedForwardNeuralNetwork:
         - weight_decay (float, optional): L2 regularization term to control overfitting (default is 0).
 
         Returns:
-        - trainingloss (list): List of training losses for each epoch.
-        - trainingaccuracy (list): List of training accuracies for each epoch.
-        - validationaccuracy (list): List of validation accuracies for each epoch.
+        - train_loss (list): List of training losses for each epoch.
+        - train_acc (list): List of training accuracies for each epoch.
+        - val_accu (list): List of validation accuracies for each epoch.
         - Y_pred (numpy array): Predicted labels for the validation set after training.
 
         '''
@@ -681,35 +654,25 @@ class FeedForwardNeuralNetwork:
         Y_train = self.Y_train[:, :length_dataset]
 
 
-        trainingloss = []
-        trainingaccuracy, validationaccuracy = [], []
+        train_loss = []
+        train_acc, val_accu = [], []
 
         num_layers = len(self.network)
 
-        prev_v_w,prev_v_b = [],[]
-        for l in range(0, len(self.network)-1):
-            prev_v_w.append(np.zeros((self.network[l+1], self.network[l])))
-        for l in range(0, len(self.network)-1):
-            prev_v_b.append(np.zeros((self.network[l+1], 1)))
+        prev_v_w,prev_v_b = self.initWeight(),self.initBias()
 
         num_points_seen = 0
         epoch = 0
         while epoch < epochs:
             start_time = time.time()
-            idx = np.random.shuffle(np.arange(length_dataset))
-            X_train = X_train[:, idx].reshape(self.img_flattened_size, length_dataset)
-            Y_train = Y_train[:, idx].reshape(self.num_classes, length_dataset)
+            offset = np.random.shuffle(np.arange(length_dataset))
+            X_train = X_train[:, offset].reshape(self.img_flattened_size, length_dataset)
+            Y_train = Y_train[:, offset].reshape(self.num_classes, length_dataset)
 
             LOSS = []
             #Y_pred = []
 
-            deltaw = []
-            for l in range(0, len(self.network)-1):
-                deltaw.append(np.zeros((self.network[l+1], self.network[l])))
-
-            deltab = []
-            for l in range(0, len(self.network)-1):
-                deltab.append(np.zeros((self.network[l+1], 1)))
+            deltaw, deltab = self.initWeight(),self.initBias()
 
             v_w = [GAMMA*prev_v_w[l] for l in range(0, len(self.network)-1)]
             v_b = [GAMMA*prev_v_b[l] for l in range(0, len(self.network)-1)]
@@ -767,12 +730,7 @@ class FeedForwardNeuralNetwork:
                     self.weights,self.biases = tempW,tempB
                     prev_v_w, prev_v_b = v_w, v_b
 
-                    deltaw = []
-                    for l in range(0, len(self.network)-1):
-                        deltaw.append(np.zeros((self.network[l+1], self.network[l])))
-                    deltab = []
-                    for l in range(0, len(self.network)-1):
-                        deltab.append(np.zeros((self.network[l+1], 1)))
+                    deltaw,deltab = self.initWeight(),self.initBias()
 
                 i+=1
 
@@ -780,10 +738,10 @@ class FeedForwardNeuralNetwork:
             elapsed = time.time() - start_time
             #Y_pred = np.array(Y_pred).transpose()
             Y_pred = self.predict(self.X_train, self.N_train)
-            trainingloss.append(np.mean(LOSS))
-            trainingaccuracy.append(accuracy(Y_train, Y_pred, length_dataset)[0])
+            train_loss.append(np.mean(LOSS))
+            train_acc.append(accuracy(Y_train, Y_pred, length_dataset)[0])
             Y_val_pred = self.predict(self.X_val, self.N_val)
-            validationaccuracy.append(accuracy(self.Y_val, Y_val_pred, self.N_val)[0])
+            val_accu.append(accuracy(self.Y_val, Y_val_pred, self.N_val)[0])
             l2RegulerizedValue = self.L2RegularisationLoss(weight_decay)
             val_loss = 0
             if self.loss_function == MEAN_SQUARE_KEY:
@@ -792,12 +750,12 @@ class FeedForwardNeuralNetwork:
             else:
               temp = crossEntropyLoss(self.Y_val.T, Y_val_pred.T)+ l2RegulerizedValue
               val_loss = np.mean(temp)
-            printAccuracy(epoch,trainingloss[epoch],trainingaccuracy[epoch],validationaccuracy[epoch],elapsed,self.alpha)
+            printAccuracy(epoch,train_loss[epoch],train_acc[epoch],val_accu[epoch],elapsed,self.alpha)
             epoch+=1
-        return trainingloss, trainingaccuracy, validationaccuracy, Y_pred
+        return train_loss, train_acc, val_accu, Y_pred
 
 
-    def rmsProp(self, epochs,length_dataset, batch_size, learning_rate, weight_decay = 0):
+    def rmsOptimizer(self, epochs,length_dataset, batch_size, learning_rate, weight_decay = 0):
         '''
         Train the neural network using the RMSProp optimization algorithm.
 
@@ -809,9 +767,9 @@ class FeedForwardNeuralNetwork:
         - weight_decay (float, optional): L2 regularization term to control overfitting (default is 0).
 
         Returns:
-        - trainingloss (list): List of training losses for each epoch.
-        - trainingaccuracy (list): List of training accuracies for each epoch.
-        - validationaccuracy (list): List of validation accuracies for each epoch.
+        - train_loss (list): List of training losses for each epoch.
+        - train_acc (list): List of training accuracies for each epoch.
+        - val_accu (list): List of validation accuracies for each epoch.
         - Y_pred (numpy array): Predicted labels for the validation set after training.
 
         '''
@@ -820,38 +778,28 @@ class FeedForwardNeuralNetwork:
         Y_train = self.Y_train[:, :length_dataset]
 
 
-        trainingloss = []
-        trainingloss = []
-        trainingaccuracy, validationaccuracy = [], []
+        train_loss = []
+        train_loss = []
+        train_acc, val_accu = [], []
 
         num_layers = len(self.network)
         EPS, BETA = 1e-8, 0.9
 
-        v_w,v_b = [],[]
-        for l in range(0, len(self.network)-1):
-            v_w.append(np.zeros((self.network[l+1], self.network[l])))
-        for l in range(0, len(self.network)-1):
-            v_b.append(np.zeros((self.network[l+1], 1)))
+        v_w,v_b = self.initWeight(),self.initBias()
 
         num_points_seen = 0
         epoch = 0
         while epoch < epochs:
             start_time = time.time()
-            idx = np.random.shuffle(np.arange(length_dataset))
-            X_train = X_train[:, idx].reshape(self.img_flattened_size, length_dataset)
-            Y_train = Y_train[:, idx].reshape(self.num_classes, length_dataset)
+            offset = np.random.shuffle(np.arange(length_dataset))
+            X_train = X_train[:, offset].reshape(self.img_flattened_size, length_dataset)
+            Y_train = Y_train[:, offset].reshape(self.num_classes, length_dataset)
 
 
             LOSS = []
             #Y_pred = []
 
-            deltaw = []
-            for l in range(0, len(self.network)-1):
-                deltaw.append(np.zeros((self.network[l+1], self.network[l])))
-
-            deltab = []
-            for l in range(0, len(self.network)-1):
-                deltab.append(np.zeros((self.network[l+1], 1)))
+            deltaw, deltab = self.initWeight(),self.initBias()
             i = 0
             while i < length_dataset:
 
@@ -899,21 +847,16 @@ class FeedForwardNeuralNetwork:
 
                     self.weights,self.biases = tempW,tempB
 
-                    deltaw = []
-                    for l in range(0, len(self.network)-1):
-                        deltaw.append(np.zeros((self.network[l+1], self.network[l])))
-                    deltab = []
-                    for l in range(0, len(self.network)-1):
-                        deltab.append(np.zeros((self.network[l+1], 1)))
+                    deltaw, deltab = self.initWeight(),self.initBias()
                 i+=1
 
             elapsed = time.time() - start_time
             #Y_pred = np.array(Y_pred).transpose()
             Y_pred = self.predict(self.X_train, self.N_train)
-            trainingloss.append(np.mean(LOSS))
-            trainingaccuracy.append(accuracy(Y_train, Y_pred, length_dataset)[0])
+            train_loss.append(np.mean(LOSS))
+            train_acc.append(accuracy(Y_train, Y_pred, length_dataset)[0])
             Y_val_pred = self.predict(self.X_val, self.N_val)
-            validationaccuracy.append(accuracy(self.Y_val, Y_val_pred, self.N_val)[0])
+            val_accu.append(accuracy(self.Y_val, Y_val_pred, self.N_val)[0])
             l2RegulerizedValue = self.L2RegularisationLoss(weight_decay)
             val_loss = 0
             if self.loss_function == MEAN_SQUARE_KEY:
@@ -922,12 +865,12 @@ class FeedForwardNeuralNetwork:
             else:
               temp = crossEntropyLoss(self.Y_val.T, Y_val_pred.T)+ l2RegulerizedValue
               val_loss = np.mean(temp)
-            printAccuracy(epoch,trainingloss[epoch],trainingaccuracy[epoch],validationaccuracy[epoch],elapsed,self.alpha)
+            printAccuracy(epoch,train_loss[epoch],train_acc[epoch],val_accu[epoch],elapsed,self.alpha)
             epoch+=1
 
-        return trainingloss, trainingaccuracy, validationaccuracy, Y_pred
+        return train_loss, train_acc, val_accu, Y_pred
 
-    def adam(self, epochs,length_dataset, batch_size, learning_rate, weight_decay = 0):
+    def adamOptimizer(self, epochs,length_dataset, batch_size, learning_rate, weight_decay = 0):
         '''
         Train the neural network using the Adam optimization algorithm.
 
@@ -939,64 +882,42 @@ class FeedForwardNeuralNetwork:
         - weight_decay (float, optional): L2 regularization term to control overfitting (default is 0).
 
         Returns:
-        - trainingloss (list): List of training losses for each epoch.
-        - trainingaccuracy (list): List of training accuracies for each epoch.
-        - validationaccuracy (list): List of validation accuracies for each epoch.
+        - train_loss (list): List of training losses for each epoch.
+        - train_acc (list): List of training accuracies for each epoch.
+        - val_accu (list): List of validation accuracies for each epoch.
         - Y_pred (numpy array): Predicted labels for the validation set after training.
 
         '''
         X_train = self.X_train[:, :length_dataset]
         Y_train = self.Y_train[:, :length_dataset]
 
-        trainingloss = []
-        trainingaccuracy, validationaccuracy = [], []
+        train_loss = []
+        train_acc, val_accu = [], []
         num_layers = len(self.network)
         EPS, BETA1, BETA2 = 1e-8, 0.9, 0.99
 
 
-        m_w,m_b = [],[]
-        for l in range(0, len(self.network)-1):
-            m_w.append(np.zeros((self.network[l+1], self.network[l])))
-        for l in range(0, len(self.network)-1):
-            m_b.append(np.zeros((self.network[l+1], 1)))
+        m_w,m_b = self.initWeight(),self.initBias()
 
-        v_w,v_b = [],[]
-        for l in range(0, len(self.network)-1):
-            v_w.append(np.zeros((self.network[l+1], self.network[l])))
-        for l in range(0, len(self.network)-1):
-            v_b.append(np.zeros((self.network[l+1], 1)))
+        v_w,v_b = self.initWeight(),self.initBias()
 
-        m_w_hat,m_b_hat = [],[]
-        for l in range(0, len(self.network)-1):
-            m_w_hat.append(np.zeros((self.network[l+1], self.network[l])))
-        for l in range(0, len(self.network)-1):
-            m_b_hat.append(np.zeros((self.network[l+1], 1)))
+        m_w_hat,m_b_hat = self.initWeight(),self.initBias()
 
-        v_w_hat,v_b_hat = [],[]
-        for l in range(0, len(self.network)-1):
-            v_w_hat.append(np.zeros((self.network[l+1], self.network[l])))
-        for l in range(0, len(self.network)-1):
-            v_b_hat.append(np.zeros((self.network[l+1], 1)))
+        v_w_hat,v_b_hat = self.initWeight(),self.initBias()
 
         num_points_seen = 0
         epoch = 0
         while epoch < epochs:
             start_time = time.time()
-            idx = np.random.shuffle(np.arange(length_dataset))
-            X_train = X_train[:, idx].reshape(self.img_flattened_size, length_dataset)
-            Y_train = Y_train[:, idx].reshape(self.num_classes, length_dataset)
+            offset = np.random.shuffle(np.arange(length_dataset))
+            X_train = X_train[:, offset].reshape(self.img_flattened_size, length_dataset)
+            Y_train = Y_train[:, offset].reshape(self.num_classes, length_dataset)
 
 
             LOSS = []
             #Y_pred = []
 
-            deltaw = []
-            for l in range(0, len(self.network)-1):
-                deltaw.append(np.zeros((self.network[l+1], self.network[l])))
-
-            deltab = []
-            for l in range(0, len(self.network)-1):
-                deltab.append(np.zeros((self.network[l+1], 1)))
+            deltaw, deltab = self.initWeight(),self.initBias()
             i = 0
             while i < length_dataset:
                 Y,H,A = self.forwardPropagate(self.X_train[:,i].reshape(self.img_flattened_size,1), self.weights, self.biases)
@@ -1066,21 +987,16 @@ class FeedForwardNeuralNetwork:
                     for l in range(len(self.biases)):
                         tempB[str(l+1)] = self.biases[str(l+1)] - (learning_rate/np.sqrt(v_b[l]+EPS))*m_b_hat[l]
                     self.weights,self.biases = tempW,tempB
-                    deltaw = []
-                    for l in range(0, len(self.network)-1):
-                        deltaw.append(np.zeros((self.network[l+1], self.network[l])))
-                    deltab = []
-                    for l in range(0, len(self.network)-1):
-                        deltab.append(np.zeros((self.network[l+1], 1)))
+                    deltaw, deltab = self.initWeight(),self.initBias()
                 i+=1
 
             elapsed = time.time() - start_time
             #Y_pred = np.array(Y_pred).transpose()
             Y_pred = self.predict(self.X_train, self.N_train)
-            trainingloss.append(np.mean(LOSS))
-            trainingaccuracy.append(accuracy(Y_train, Y_pred, length_dataset)[0])
+            train_loss.append(np.mean(LOSS))
+            train_acc.append(accuracy(Y_train, Y_pred, length_dataset)[0])
             Y_val_pred = self.predict(self.X_val, self.N_val)
-            validationaccuracy.append(accuracy(self.Y_val, Y_val_pred, self.N_val)[0])
+            val_accu.append(accuracy(self.Y_val, Y_val_pred, self.N_val)[0])
             l2RegulerizedValue = self.L2RegularisationLoss(weight_decay)
             val_loss = 0
             if self.loss_function == MEAN_SQUARE_KEY:
@@ -1089,13 +1005,13 @@ class FeedForwardNeuralNetwork:
             else:
               temp = crossEntropyLoss(self.Y_val.T, Y_val_pred.T)+ l2RegulerizedValue
               val_loss = np.mean(temp)
-            printAccuracy(epoch,trainingloss[epoch],trainingaccuracy[epoch],validationaccuracy[epoch],elapsed,self.alpha)
+            printAccuracy(epoch,train_loss[epoch],train_acc[epoch],val_accu[epoch],elapsed,self.alpha)
             epoch+=1
 
-        return trainingloss, trainingaccuracy, validationaccuracy, Y_pred
+        return train_loss, train_acc, val_accu, Y_pred
 
 
-    def nadam(self, epochs,length_dataset, batch_size, learning_rate, weight_decay = 0):
+    def nadamOptimizer(self, epochs,length_dataset, batch_size, learning_rate, weight_decay = 0):
         '''
         Train the neural network using the Nadam optimization algorithm.
 
@@ -1107,9 +1023,9 @@ class FeedForwardNeuralNetwork:
         - weight_decay (float, optional): L2 regularization term to control overfitting (default is 0).
 
         Returns:
-        - trainingloss (list): List of training losses for each epoch.
-        - trainingaccuracy (list): List of training accuracies for each epoch.
-        - validationaccuracy (list): List of validation accuracies for each epoch.
+        - train_loss (list): List of training losses for each epoch.
+        - train_acc (list): List of training accuracies for each epoch.
+        - val_accu (list): List of validation accuracies for each epoch.
         - Y_pred (numpy array): Predicted labels for the validation set after training.
 
         '''
@@ -1117,55 +1033,33 @@ class FeedForwardNeuralNetwork:
         Y_train = self.Y_train[:, :length_dataset]
 
 
-        trainingloss = []
-        trainingaccuracy = []
-        validationaccuracy = []
+        train_loss = []
+        train_acc = []
+        val_accu = []
         num_layers = len(self.network)
 
         GAMMA, EPS, BETA1, BETA2 = 0.9, 1e-8, 0.9, 0.99
 
-        m_w,m_b = [],[]
-        for l in range(0, len(self.network)-1):
-            m_w.append(np.zeros((self.network[l+1], self.network[l])))
-        for l in range(0, len(self.network)-1):
-            m_b.append(np.zeros((self.network[l+1], 1)))
+        m_w,m_b = self.initWeight(),self.initBias()
 
-        v_w,v_b = [],[]
-        for l in range(0, len(self.network)-1):
-            v_w.append(np.zeros((self.network[l+1], self.network[l])))
-        for l in range(0, len(self.network)-1):
-            v_b.append(np.zeros((self.network[l+1], 1)))
+        v_w,v_b = self.initWeight(),self.initBias()
 
-        m_w_hat,m_b_hat = [],[]
-        for l in range(0, len(self.network)-1):
-            m_w_hat.append(np.zeros((self.network[l+1], self.network[l])))
-        for l in range(0, len(self.network)-1):
-            m_b_hat.append(np.zeros((self.network[l+1], 1)))
+        m_w_hat,m_b_hat = self.initWeight(),self.initBias()
 
-        v_w_hat,v_b_hat = [],[]
-        for l in range(0, len(self.network)-1):
-            v_w_hat.append(np.zeros((self.network[l+1], self.network[l])))
-        for l in range(0, len(self.network)-1):
-            v_b_hat.append(np.zeros((self.network[l+1], 1)))
+        v_w_hat,v_b_hat = self.initWeight(),self.initBias()
 
         num_points_seen = 0
 
         epoch = 0
         while epoch < epochs:
             start_time = time.time()
-            idx = np.random.shuffle(np.arange(length_dataset))
-            X_train = X_train[:, idx].reshape(self.img_flattened_size, length_dataset)
-            Y_train = Y_train[:, idx].reshape(self.num_classes, length_dataset)
+            offset = np.random.shuffle(np.arange(length_dataset))
+            X_train = X_train[:, offset].reshape(self.img_flattened_size, length_dataset)
+            Y_train = Y_train[:, offset].reshape(self.num_classes, length_dataset)
 
             LOSS = []
             #Y_pred = []
-            deltaw = []
-            for l in range(0, len(self.network)-1):
-                deltaw.append(np.zeros((self.network[l+1], self.network[l])))
-
-            deltab = []
-            for l in range(0, len(self.network)-1):
-                deltab.append(np.zeros((self.network[l+1], 1)))
+            deltaw, deltab = self.initWeight(),self.initBias()
             i = 0
             while i < length_dataset:
 
@@ -1237,21 +1131,16 @@ class FeedForwardNeuralNetwork:
                         tempB[str(l+1)] = self.biases[str(l+1)] - (learning_rate/np.sqrt(v_b_hat[l])+EPS)*(BETA1*m_b_hat[l] + (1-BETA1)*deltab[l])
                     self.weights,self.biases = tempW,tempB
 
-                    deltaw = []
-                    for l in range(0, len(self.network)-1):
-                        deltaw.append(np.zeros((self.network[l+1], self.network[l])))
-                    deltab = []
-                    for l in range(0, len(self.network)-1):
-                        deltab.append(np.zeros((self.network[l+1], 1)))
+                    deltaw, deltab = self.initWeight(),self.initBias()
                 i+=1
 
             elapsed = time.time() - start_time
 
             Y_pred = self.predict(self.X_train, self.N_train)
-            trainingloss.append(np.mean(LOSS))
-            trainingaccuracy.append(accuracy(Y_train, Y_pred, length_dataset)[0])
+            train_loss.append(np.mean(LOSS))
+            train_acc.append(accuracy(Y_train, Y_pred, length_dataset)[0])
             Y_val_pred = self.predict(self.X_val, self.N_val)
-            validationaccuracy.append(accuracy(self.Y_val, Y_val_pred, self.N_val)[0])
+            val_accu.append(accuracy(self.Y_val, Y_val_pred, self.N_val)[0])
             l2RegulerizedValue = self.L2RegularisationLoss(weight_decay)
             val_loss = 0
             if self.loss_function == MEAN_SQUARE_KEY:
@@ -1260,6 +1149,6 @@ class FeedForwardNeuralNetwork:
             else:
               temp = crossEntropyLoss(self.Y_val.T, Y_val_pred.T)+ l2RegulerizedValue
               val_loss = np.mean(temp)
-            printAccuracy(epoch,trainingloss[epoch],trainingaccuracy[epoch],validationaccuracy[epoch],elapsed,self.alpha)
+            printAccuracy(epoch,train_loss[epoch],train_acc[epoch],val_accu[epoch],elapsed,self.alpha)
             epoch+=1
-        return trainingloss, trainingaccuracy, validationaccuracy, Y_pred
+        return train_loss, train_acc, val_accu, Y_pred

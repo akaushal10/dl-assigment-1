@@ -4,8 +4,8 @@ from keras.datasets import fashion_mnist
 from keras.datasets import mnist
 import argparse
 from feedForwardNeuralNetwork import FeedForwardNeuralNetwork
-from my_utility import SIGMOID_KEY,TANH_KEY,RELU_KEY,XAVIER_KEY,RANDOM_KEY,SGD_KEY,MGD_KEY,NAG_KEY,RMSPROP_KEY,ADAM_KEY,NADAM_KEY,CROSS_ENTROPY_KEY,MEAN_SQUARE_KEY
-from my_utility import FASHION_MNIST_DATASET_KEY,MNIST_DATASET_KEY
+from constant import SIGMOID_KEY,TANH_KEY,RELU_KEY,XAVIER_KEY,RANDOM_KEY,SGD_KEY,MGD_KEY,NAG_KEY,RMSPROP_KEY,ADAM_KEY,NADAM_KEY,CROSS_ENTROPY_KEY,MEAN_SQUARE_KEY
+from constant import FASHION_MNIST_DATASET_KEY,MNIST_DATASET_KEY
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-wp","--wandb_project",help="Project name used to track experiments in Weights & Biases dashboard",default="dl-assigment-1")
@@ -88,19 +88,19 @@ best_configs = dict(
     initializer=args.weight_init,
     loss=args.loss,
 )
-if(type(best_configs.max_epochs)==type('')):
-    best_configs.max_epochs = int(best_configs.max_epochs)
-if(type(best_configs.num_hidden_layers)==type('')):
-    best_configs.num_hidden_layers = int(best_configs.num_hidden_layers)
-if(type(best_configs.num_hidden_neurons)==type('')):
-    best_configs.num_hidden_neurons = int(best_configs.num_hidden_neurons)
+if(type(best_configs["max_epochs"])==type('')):
+    best_configs["max_epochs"] = int(best_configs["max_epochs"])
+if(type(best_configs["num_hidden_layers"])==type('')):
+    best_configs["num_hidden_layers"] = int(best_configs["num_hidden_layers"])
+if(type(best_configs["num_hidden_neurons"])==type('')):
+    best_configs["num_hidden_neurons"] = int(best_configs["num_hidden_neurons"])
 
-if(type(best_configs.weight_decay)==type('')):
-    best_configs.weight_decay = float(best_configs.weight_decay)
-if(type(best_configs.learning_rate)==type('')):
-    best_configs.learning_rate = float(best_configs.learning_rate)
-if(type(best_configs.batch_size)==type('')):
-    best_configs.batch_size = int(best_configs.batch_size)
+if(type(best_configs["weight_decay"])==type('')):
+    best_configs["weight_decay"] = float(best_configs["weight_decay"])
+if(type(best_configs["learning_rate"])==type('')):
+    best_configs["learning_rate"] = float(best_configs["learning_rate"])
+if(type(best_configs["batch_size"])==type('')):
+    best_configs["batch_size"] = int(best_configs["batch_size"])
 
 
 FFNN = FeedForwardNeuralNetwork(
