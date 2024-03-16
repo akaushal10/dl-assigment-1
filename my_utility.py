@@ -1,12 +1,24 @@
 import numpy as np
 
 # Constants
-SIGMOID = "sigmoid"
-MEAN_SQUARE_ERROR = "mse"
-SOFT_MAX = "softmax"
-RE_LU = "relu"
-CROSS_ENTROPY = "cross_entropy"
-TAN_H = "tanh"
+SIGMOID_KEY = "sigmoid"
+TANH_KEY = "tanh"
+RELU_KEY = "ReLU"
+XAVIER_KEY = "Xavier"
+RANDOM_KEY = "random"
+HE_KEY = "HE"
+SGD_KEY="sgd"
+MGD_KEY="momentum"
+NAG_KEY="nag"
+RMSPROP_KEY="rmsprop"
+ADAM_KEY="adam"
+NADAM_KEY="nadam"
+
+CROSS_ENTROPY_KEY = 'cross_entropy'
+MEAN_SQUARE_KEY = 'mean_squared_error'
+
+FASHION_MNIST_DATASET_KEY = 'fashion_mnist'
+MNIST_DATASET_KEY = 'mnist'
 
 def sigmoid(z):
     # z = np.clip(z,500,-500)
@@ -45,19 +57,6 @@ def del_tanh(z):
 
 def del_reLu(z):
     return (z>0)*np.ones(z.shape) + (z<0)*(0.01*np.ones(z.shape) )
-
-
-activation = {
-    SIGMOID :sigmoid,
-    SOFT_MAX :softmax,
-    RE_LU :reLu,
-    TAN_H :tanh,
-}
-del_activation = {
-    SIGMOID : del_sigmoid,
-    TAN_H : del_tanh,
-    RE_LU : del_reLu,
-}
 
 def Xavier_initializer(dim):
     '''

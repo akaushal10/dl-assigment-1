@@ -1,13 +1,15 @@
 import time
 import numpy as np
 from matplotlib import pyplot as plt
-from keras.datasets import fashion_mnist
-import math
 from my_utility import accuracy,oneHotEncode,random_initializer
-from my_utility import sigmoid,tanh,reLu,del_sigmoid,del_reLu,del_tanh,del_activation,activation
+from my_utility import sigmoid,tanh,reLu,del_sigmoid,del_reLu,del_tanh,softmax
 from my_utility import Xavier_initializer,random_initializer,He_initializer
 from my_utility import oneHotEncode,accuracy,printAccuracy
 from my_utility import crossEntropyLoss,meanSquaredErrorLoss
+from my_utility import SIGMOID_KEY,TANH_KEY,RELU_KEY
+from my_utility import XAVIER_KEY,RANDOM_KEY,HE_KEY
+from my_utility import SGD_KEY,MGD_KEY,NAG_KEY,RMSPROP_KEY,ADAM_KEY,NADAM_KEY
+from my_utility import CROSS_ENTROPY_KEY,MEAN_SQUARE_KEY
 
 GRAD_A = "del_a"
 GRAD_W = "del_w"
@@ -37,7 +39,7 @@ class FeedForwardNeuralNetwork:
     - activation_fun (str): Activation function used in hidden layers.
     - initializer (str): Weight initialization method - "RANDOM" (default), "XAVIER", or "HE".
     - optimizer (str): Optimization algorithm - "SGD" (default), "MBGD", "NAGD", "RMS", "ADAM", or "NADAM".
-    - loss_function (str): Loss function used for training - "CROSS_ENTROPY" (default) or "MSE".
+    - loss_function (str): Loss function used for training - "CROSS_ENTROPY" (default) or MEAN_SQUARE_KEY.
 
     Methods:
     - __init__: Initializes the neural network with the provided parameters and initializes weights and biases.
@@ -50,7 +52,7 @@ class FeedForwardNeuralNetwork:
     - The activation function and its derivative are specified based on the chosen activation_fun.
     - The initializer for weights is selected from "RANDOM" (default), "XAVIER", or "HE".
     - The optimization algorithm can be chosen from "SGD" (default), "MBGD", "NAGD", "RMS", "ADAM", or "NADAM".
-    - The loss function for training is chosen from "CROSS_ENTROPY" (default) or "MSE".
+    - The loss function for training is chosen from "CROSS_ENTROPY" (default) or MEAN_SQUARE_KEY.
     '''
     def __init__(
         self,
@@ -125,26 +127,26 @@ class FeedForwardNeuralNetwork:
         self.Y_test = oneHotEncode(self.num_classes,Y_test_raw)
 
 
-        self.Activations_dict = {"SIGMOID": sigmoid, "TANH": tanh, "RELU": reLu}
+        self.Activations_dict = {SIGMOID_KEY: sigmoid, TANH_KEY: tanh, RELU_KEY: reLu}
         self.DerActivation_dict = {
-            "SIGMOID": del_sigmoid,
-            "TANH": del_tanh,
-            "RELU": del_reLu,
+            SIGMOID_KEY: del_sigmoid,
+            TANH_KEY: del_tanh,
+            RELU_KEY: del_reLu,
         }
 
         self.Initializer_dict = {
-            "XAVIER": Xavier_initializer,
-            "RANDOM": random_initializer,
-            "HE": He_initializer
+            XAVIER_KEY: Xavier_initializer,
+            RANDOM_KEY: random_initializer,
+            HE_KEY: He_initializer
         }
 
         self.Optimizer_dict = {
-            "SGD": self.sgdMiniBatch,
-            "MGD": self.mgd,
-            "NAG": self.nag,
-            "RMSPROP": self.rmsProp,
-            "ADAM": self.adam,
-            "NADAM": self.nadam,
+            SGD_KEY: self.sgdMiniBatch,
+            MGD_KEY: self.mgd,
+            NAG_KEY: self.nag,
+            RMSPROP_KEY: self.rmsProp,
+            ADAM_KEY: self.adam,
+            NADAM_KEY: self.nadam,
         }
 
         self.activation = self.Activations_dict[activation]
@@ -290,9 +292,9 @@ class FeedForwardNeuralNetwork:
         num_layers = len(self.network)
 
         # Gradient with respect to the output layer is absolutely fine.
-        if self.loss_function == "CROSS":
+        if self.loss_function == CROSS_ENTROPY_KEY:
             globals()["grad_a" + str(num_layers - 1)] = -(Y_train_batch - Y)
-        elif self.loss_function == "MSE":
+        elif self.loss_function == MEAN_SQUARE_KEY:
             globals()["grad_a" + str(num_layers - 1)] = np.multiply(
                 2 * (Y - Y_train_batch), np.multiply(Y, (1 - Y))
             )
@@ -384,7 +386,7 @@ class FeedForwardNeuralNetwork:
                 del_b = [grad_biases[network_size - 2 - i] for i in range(network_size - 1)]
 
                 l2Loss = self.L2RegularisationLoss(weight_decay)
-                if self.loss_function == "MSE":
+                if self.loss_function == MEAN_SQUARE_KEY:
                     LOSS.append(meanSquaredErrorLoss(self.Y_train[:, i].reshape(self.num_classes, 1), Y_cap) + l2Loss)
                 else:
                     LOSS.append(crossEntropyLoss(self.Y_train[:, i].reshape(self.num_classes, 1), Y_cap) + l2Loss)
@@ -408,7 +410,7 @@ class FeedForwardNeuralNetwork:
             validationaccuracy.append(accuracy(self.Y_val, Y_val_pred, self.N_val)[0])
             l2RegulerizedValue = self.L2RegularisationLoss(weight_decay)
             val_loss = 0
-            if self.loss_function == "MSE":
+            if self.loss_function == MEAN_SQUARE_KEY:
               temp = meanSquaredErrorLoss(self.Y_val.T, Y_val_pred.T)+ l2RegulerizedValue
               val_loss = np.mean(temp)
             else:
@@ -477,7 +479,7 @@ class FeedForwardNeuralNetwork:
                     tempDeltab.append(grad_biases[num_layers-2 - j] + deltab[j])
                 deltaw,deltab = tempDeltaw,tempDeltab
                 l2RegulerizedValue = self.L2RegularisationLoss(weight_decay)
-                if self.loss_function == "MSE":
+                if self.loss_function == MEAN_SQUARE_KEY:
                     LOSS.append(meanSquaredErrorLoss(
                             self.Y_train[:, i].reshape(self.num_classes, 1), Y
                         )
@@ -515,7 +517,7 @@ class FeedForwardNeuralNetwork:
             validationaccuracy.append(accuracy(self.Y_val, Y_val_pred, self.N_val)[0])
             l2RegulerizedValue = self.L2RegularisationLoss(weight_decay)
             val_loss = 0
-            if self.loss_function == "MSE":
+            if self.loss_function == MEAN_SQUARE_KEY:
               temp = meanSquaredErrorLoss(self.Y_val.T, Y_val_pred.T)+ l2RegulerizedValue
               val_loss = np.mean(temp)
             else:
@@ -594,7 +596,7 @@ class FeedForwardNeuralNetwork:
                 deltaw,deltab = tempDeltaw,tempDeltab
 
                 l2RegulerizedValue = self.L2RegularisationLoss(weight_decay)
-                if self.loss_function == "MSE":
+                if self.loss_function == MEAN_SQUARE_KEY:
                     LOSS.append(meanSquaredErrorLoss(
                             self.Y_train[:, i].reshape(self.num_classes, 1), Y
                         )
@@ -642,7 +644,7 @@ class FeedForwardNeuralNetwork:
             validationaccuracy.append(accuracy(self.Y_val, Y_val_pred, self.N_val)[0])
             l2RegulerizedValue = self.L2RegularisationLoss(weight_decay)
             val_loss = 0
-            if self.loss_function == "MSE":
+            if self.loss_function == MEAN_SQUARE_KEY:
               temp = meanSquaredErrorLoss(self.Y_val.T, Y_val_pred.T)+ l2RegulerizedValue
               val_loss = np.mean(temp)
             else:
@@ -733,7 +735,7 @@ class FeedForwardNeuralNetwork:
                 deltaw,deltab = tempDeltaw,tempDeltab
 
                 l2RegulerizedValue = self.L2RegularisationLoss(weight_decay)
-                if self.loss_function == "MSE":
+                if self.loss_function == MEAN_SQUARE_KEY:
                     LOSS.append(meanSquaredErrorLoss(
                             self.Y_train[:, i].reshape(self.num_classes, 1), Y
                         )
@@ -784,7 +786,7 @@ class FeedForwardNeuralNetwork:
             validationaccuracy.append(accuracy(self.Y_val, Y_val_pred, self.N_val)[0])
             l2RegulerizedValue = self.L2RegularisationLoss(weight_decay)
             val_loss = 0
-            if self.loss_function == "MSE":
+            if self.loss_function == MEAN_SQUARE_KEY:
               temp = meanSquaredErrorLoss(self.Y_val.T, Y_val_pred.T)+ l2RegulerizedValue
               val_loss = np.mean(temp)
             else:
@@ -865,7 +867,7 @@ class FeedForwardNeuralNetwork:
                 deltaw,deltab = tempDeltaw,tempDeltab
 
                 l2RegulerizedValue = self.L2RegularisationLoss(weight_decay)
-                if self.loss_function == "MSE":
+                if self.loss_function == MEAN_SQUARE_KEY:
                     LOSS.append(meanSquaredErrorLoss(
                             self.Y_train[:, i].reshape(self.num_classes, 1), Y
                         )
@@ -914,7 +916,7 @@ class FeedForwardNeuralNetwork:
             validationaccuracy.append(accuracy(self.Y_val, Y_val_pred, self.N_val)[0])
             l2RegulerizedValue = self.L2RegularisationLoss(weight_decay)
             val_loss = 0
-            if self.loss_function == "MSE":
+            if self.loss_function == MEAN_SQUARE_KEY:
               temp = meanSquaredErrorLoss(self.Y_val.T, Y_val_pred.T)+ l2RegulerizedValue
               val_loss = np.mean(temp)
             else:
@@ -1009,7 +1011,7 @@ class FeedForwardNeuralNetwork:
                 deltaw,deltab = tempDeltaw,tempDeltab
 
                 l2RegulerizedValue = self.L2RegularisationLoss(weight_decay)
-                if self.loss_function == "MSE":
+                if self.loss_function == MEAN_SQUARE_KEY:
                     LOSS.append(meanSquaredErrorLoss(
                             self.Y_train[:, i].reshape(self.num_classes, 1), Y
                         )
@@ -1081,7 +1083,7 @@ class FeedForwardNeuralNetwork:
             validationaccuracy.append(accuracy(self.Y_val, Y_val_pred, self.N_val)[0])
             l2RegulerizedValue = self.L2RegularisationLoss(weight_decay)
             val_loss = 0
-            if self.loss_function == "MSE":
+            if self.loss_function == MEAN_SQUARE_KEY:
               temp = meanSquaredErrorLoss(self.Y_val.T, Y_val_pred.T)+ l2RegulerizedValue
               val_loss = np.mean(temp)
             else:
@@ -1180,7 +1182,7 @@ class FeedForwardNeuralNetwork:
 
 
                 l2RegulerizedValue = self.L2RegularisationLoss(weight_decay)
-                if self.loss_function == "MSE":
+                if self.loss_function == MEAN_SQUARE_KEY:
                     LOSS.append(meanSquaredErrorLoss(
                             self.Y_train[:, i].reshape(self.num_classes, 1), Y
                         )
@@ -1252,7 +1254,7 @@ class FeedForwardNeuralNetwork:
             validationaccuracy.append(accuracy(self.Y_val, Y_val_pred, self.N_val)[0])
             l2RegulerizedValue = self.L2RegularisationLoss(weight_decay)
             val_loss = 0
-            if self.loss_function == "MSE":
+            if self.loss_function == MEAN_SQUARE_KEY:
               temp = meanSquaredErrorLoss(self.Y_val.T, Y_val_pred.T)+ l2RegulerizedValue
               val_loss = np.mean(temp)
             else:
