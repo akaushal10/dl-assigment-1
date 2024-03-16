@@ -44,6 +44,12 @@ deep_learning_ass_1.ipynb - Google colab notebook to carry out training and hype
 ## Training, Validation and Hyperparameter optimisation
 
 
+To install the required dependencies, you can run the following command
+```
+pip install -r requirements. txt
+```
+
+After this you can follow the below instructions to run
 ```
 python train.py
 ```

@@ -1,0 +1,4 @@
+wandb==0.16.4
+numpy==1.25.2
+time
+tensorflow>=2.15
